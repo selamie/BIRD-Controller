@@ -61,8 +61,8 @@ void initEncoders() {
   SPI.transfer(0x88);                       // Write to MDR0
   SPI.transfer(0x03);                       // Configure to 4 byte mode
   digitalWrite(slaveSelectEnc2,HIGH);       // Terminate SPI conversation 
-}
 */
+}
 long readEncoder() {
   
   // Initialize temporary variables for SPI read
@@ -186,7 +186,7 @@ void loop() {
   float v = calculateVelocity(2);
   command(v);
   float i = getCurrent()*1000.0;
-  float enc = getAngle(2);  
+  float enc = getAngle();  
   Serial.println(i,6);
 
   
@@ -201,8 +201,8 @@ float calculateVelocity(int enc){
   //returns impedance controlled velocity
 
 //get parameters
-float theta_k = getAngle(enc); //rad 
-float w = getVelocity(enc); //rad/s
+float theta_k = getAngle(); //rad 
+float w = getVelocity(); //rad/s
 float i_k = getCurrent(); //A?
 
 //calculations
@@ -225,8 +225,8 @@ float calculatePIDvelocity(int enc){
                 float e_old = 0;
 
 //get parameters
-float theta_k = getAngle(enc); //rad
-float w = getVelocity(enc); //rad/s
+float theta_k = getAngle(); //rad
+float w = getVelocity(); //rad/s
 float i_k = getCurrent(); //A?
 
 //calculations
@@ -297,11 +297,11 @@ float getVelocity() {
   return velocity;
 }
 
-float getAngle(int enc) { 
+float getAngle() { 
   //expects integer denoting which encoder to read (motor 1 or 2)
   //outputs the current shaft angle in radians
 
-  float revs = readEncoder(enc)/pulses;
+  float revs = readEncoder()/pulses;
   float rad = revs*2*3.14159;
   //Serial.println(revs, 6);
   return rad;
