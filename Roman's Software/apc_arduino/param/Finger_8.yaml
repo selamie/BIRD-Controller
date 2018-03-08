@@ -1,0 +1,6 @@
+/arduino_params/HE2_Contact_Threshold: 15.0
+/arduino_params/HE3_Contact_Threshold: 13.0
+/arduino_params/Spatula_F2_Zero: 3000
+/arduino_params/Strain_Gauge_F2_Threshold: 4.0
+/arduino_params/SucOri_F2_side_Threshold: 199.8923076923077
+/arduino_params/SucOri_F2_straight_Threshold: 247.6595744680851

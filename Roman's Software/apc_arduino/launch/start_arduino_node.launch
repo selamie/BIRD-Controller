@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<launch>
+  <machine name="mcube-005" address="mcube-005" user="mcube" timeout="2.0" env-loader="/home/mcube/apc/software/config/apc_environment.sh" />
+
+  <arg name="F_uneven" />
+  <arg name="F_even"/>
+  <arg name="wrist"/>
+  <param name="Finger1_Path" type="str" value="$(find apc_arduino)/param/Finger_$(arg F_uneven).yaml"/>
+  <param name="Finger2_Path" type="str" value="$(find apc_arduino)/param/Finger_$(arg F_even).yaml"/>
+  <param name="Finger1_Suction_Path" type="str" value="$(find apc_arduino)/param/Finger_$(arg F_uneven)_$(arg wrist).yaml"/>
+  <param name="Finger2_Suction_Path" type="str" value="$(find apc_arduino)/param/Finger_$(arg F_even)_$(arg wrist).yaml"/>
+  <node name="arduino" machine="mcube-005" ns="Arduino" pkg="apc_arduino" type="serial_node.py" args= "/dev/arduino/micro" output="screen" respawn="true"/>  
+  <rosparam command="load" file="$(find apc_arduino)/param/Finger_$(arg F_uneven).yaml" />
+  <rosparam command="load" file="$(find apc_arduino)/param/Finger_$(arg F_even).yaml" />
+  <rosparam command="load" file="$(find apc_arduino)/param/Finger_$(arg F_uneven)_$(arg wrist).yaml" />
+  <rosparam command="load" file="$(find apc_arduino)/param/Finger_$(arg F_even)_$(arg wrist).yaml" />
+  <node name="connection_checker" machine="mcube-005" ns="Arduino" pkg="apc_arduino" type="connection_checker.py" output="screen"/>
+  <node name="spatula_joint_publisher" pkg="apc_arduino" type="spatula_joint_publisher.py" output="screen"/>  
+</launch>

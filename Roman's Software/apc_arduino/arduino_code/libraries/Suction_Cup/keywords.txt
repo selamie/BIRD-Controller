@@ -1,0 +1,3 @@
+Suction_Cup		KEYWORD 1
+turn_on			KEYWORD 2
+turn_off		KEYWORD 3

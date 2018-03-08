@@ -1,0 +1,30 @@
+const int A_IA = 11;
+const int A_IB = 8;
+
+byte spd = 20;
+#include <Servo.h>
+
+Servo myservo;
+int pos = 0;
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(A_IA, OUTPUT);
+  pinMode(A_IB, OUTPUT);
+  myservo.attach(11);
+}
+
+void loop() {
+  myservo.write(0);
+  delay(50);
+  myservo.write(10);
+  delay(50);
+  myservo.write(20);
+  delay(50);
+  myservo.write(10);
+  delay(50);
+  myservo.write(0);
+  delay(50);
+}
+
+
