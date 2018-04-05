@@ -2,11 +2,6 @@
  * This is an impedance controller
  * Lever attached to the motor should stay at specified position theta_d, in radians
  * 
- * pins: 
- *inA = 1 
- *inB = 2
- *pwm = 10
- *
  * need to install DualVNH5019MotorShield library if you haven't yet. 
  * 
  * 
@@ -17,25 +12,21 @@
 // connected properly for your Arduino version
 #include <SPI.h>
 
-// Slave Select pins for encoders 1 and 2
+// Slave Select pin
 // Feel free to reallocate these pins to best suit your circuit
 const int slaveSelectEnc1 = 8;
-//const int slaveSelectEnc2 = 8;
 
 // These hold the current encoder count.
 signed long encoder1count = 0;
-//signed long encoder2count = 0;
 
 void initEncoders() {
   
   // Set slave selects as outputs
   pinMode(slaveSelectEnc1, OUTPUT);
-  //pinMode(slaveSelectEnc2, OUTPUT);
-  
+ 
   // Raise select pins
   // Communication begins when you drop the individual select signsl
   digitalWrite(slaveSelectEnc1,HIGH);
-  //digitalWrite(slaveSelectEnc2,HIGH);
   
   SPI.begin();
   
@@ -50,18 +41,6 @@ void initEncoders() {
   SPI.transfer(0x03);                       // Configure to 4 byte mode
   digitalWrite(slaveSelectEnc1,HIGH);       // Terminate SPI conversation 
 
-/*
-  // Initialize encoder 2
-  //    Clock division factor: 0
-  //    Negative index input
-  //    free-running count mode
-  //    x4 quatrature count mode (four counts per quadrature cycle)
-  // NOTE: For more information on commands, see datasheet
-  digitalWrite(slaveSelectEnc2,LOW);        // Begin SPI conversation
-  SPI.transfer(0x88);                       // Write to MDR0
-  SPI.transfer(0x03);                       // Configure to 4 byte mode
-  digitalWrite(slaveSelectEnc2,HIGH);       // Terminate SPI conversation 
-*/
 }
 long readEncoder() {
   
@@ -78,18 +57,6 @@ long readEncoder() {
     count_4 = SPI.transfer(0x00);           // Read lowest order byte
     digitalWrite(slaveSelectEnc1,HIGH);     // Terminate SPI conversation 
  
-  /*
-  // Read encoder 2
-  else if (encoder == 2) {
-    digitalWrite(slaveSelectEnc2,LOW);      // Begin SPI conversation
-    SPI.transfer(0x60);                      // Request count
-    count_1 = SPI.transfer(0x00);           // Read highest order byte
-    count_2 = SPI.transfer(0x00);           
-    count_3 = SPI.transfer(0x00);           
-    count_4 = SPI.transfer(0x00);           // Read lowest order byte
-    digitalWrite(slaveSelectEnc2,HIGH);     // Terminate SPI conversation 
-  }
-  */
   // Calculate encoder count
   count_value = (count_1 << 8) + count_2;
   count_value = (count_value << 8) + count_3;
@@ -117,60 +84,43 @@ void clearEncoderCount() {
   digitalWrite(slaveSelectEnc1,LOW);      // Begin SPI conversation  
   SPI.transfer(0xE0);    
   digitalWrite(slaveSelectEnc1,HIGH);     // Terminate SPI conversation   
-  /*
-  // Set encoder2's data register to 0
-  digitalWrite(slaveSelectEnc2,LOW);      // Begin SPI conversation  
-  // Write to DTR
-  SPI.transfer(0x98);    
-  // Load data
-  SPI.transfer(0x00);  // Highest order byte
-  SPI.transfer(0x00);           
-  SPI.transfer(0x00);           
-  SPI.transfer(0x00);  // lowest order byte
-  digitalWrite(slaveSelectEnc2,HIGH);     // Terminate SPI conversation 
   
-  delayMicroseconds(100);  // provides some breathing room between SPI conversations
-  
-  // Set encoder2's current data register to center
-  digitalWrite(slaveSelectEnc2,LOW);      // Begin SPI conversation  
-  SPI.transfer(0xE0);    
-  digitalWrite(slaveSelectEnc2,HIGH);     // Terminate SPI conversation 
-  */
 }
 
 //**********PROGRAM START*****************
 
 //set your desired angle:
-const float theta_d = 0.5*3.14159;
+const float theta_d = 2*3.14159;
 
 //pins
 const int motorA = 2;
-const int motorB = 4;
-const int motorPWM = 9;
+const int motorB = 3;
+const int motorPWM = 9; //threshold to move: analogWrite command of ~35
 const int current1 = A0;
 
-//properties taken from Faulhauber data sheet
-const float R = 8.0; //winding resistance, ohms
-const float kb = 0.0000147; //0.884; //back emf, mV/min --> 0.884mV/min * 1V/1000mV *1min/60s
-const float ki = 0.118; //current constant
-const float pulses = 512.0; //THIS IS A HACK //should confirm...
-//At 512 one rotation is exactly 6.28. Perfect!
+//properties taken from motor data sheet
+//
+const float R = 5.3667; //winding resistance, ohms //found by stalling motor measuring current & knowing voltage
+const float kb = 0.000147; //back emf, mV/min --> 0.884mV/min * 1V/1000mV *1min/60s = V/s //STILL FROM FAULHABER MOTOR
+const float ki = 3.8989; //current constant //3.8989 A/nm found by stalling motor & measuring current divide by min stall torque
+const float pulses = 739.908; //184.977; 
+
 
 //set gains
-float k = 0.01; //torque control position gain
-float b = 0.0001; //torque control velocity gain
-float k_p = 2.5; //proportional gain for current
+float k = 0.6; //torque control position gain
+float b = 0.02; //torque control velocity gain
+float k_p = 0; //proportional gain for current
 
 //for use in PID controller
-float pid_k_p = 1;
-float pid_k_d = 0.0008;
-float pid_k_i = 0.0002;
+float pid_k_p = 0.1;
+float pid_k_d = 0.05;
+float pid_k_i = 0;
 
 void setup() {
   
   Serial.begin(9600);
- initEncoders();       Serial.println("Encoders Initialized...");  
- clearEncoderCount();  Serial.println("Encoders Cleared...");
+  initEncoders();       Serial.println("Encoders Initialized...");  
+  clearEncoderCount();  Serial.println("Encoders Cleared...");
   pinMode(motorA, OUTPUT);
   pinMode(motorB, OUTPUT);
   pinMode(motorPWM, OUTPUT);
@@ -179,45 +129,45 @@ void setup() {
 }
 
 
-
+//********************LOOP*****************
 
 void loop() {
   
-  float v = calculateVelocity(2);
-  command(v);
-  float i = getCurrent()*1000.0;
-  float enc = getAngle();  
-  Serial.println(i,6);
-
   
+  float v = calculateVelocity();
+  command(v);
+  float pos = getAngle();
+  Serial.println("pos:");
+  Serial.println(pos);
+  Serial.println("v:");
+  Serial.println(v); 
     
 } 
 
 
-//*************TO IMPLEMENT*******************
+//*************FUNCTIONS*******************
 
-float calculateVelocity(int enc){
+float calculateVelocity(){
   //expects integer indicating encoder
-  //returns impedance controlled velocity
+  //returns impedance controlled velocity (in m/s?)
 
 //get parameters
 float theta_k = getAngle(); //rad 
 float w = getVelocity(); //rad/s
-float i_k = getCurrent(); //A?
+float i_k = getCurrent(); //A
 
 //calculations
 float theta = theta_k - theta_d;
 
-float tau = -k*theta + b*w; //control law
+float tau = k*theta + b*w; //control law
 float i_d = tau/ki; //desired current from torque control/torque-to-current constant
 
-float v = R*i_d + k_p*(i_d - i_k) + kb*w;  //commanded voltage //v = 8*0 + 0*(i_d-i_k) + 0.884*w
-
+float v = R*i_d + k_p*(i_d - i_k) + kb*w;  //commanded voltage //with k_p = 0, v = 5.36*i_d + 0.884*w
 
 return v; 
 }
 
-float calculatePIDvelocity(int enc){
+float calculatePIDvelocity(){
   //expects integer indicating encoder
   //returns impedance controlled velocity
                 float error_count = 0;
@@ -257,24 +207,23 @@ void command(float v){
     float volts2pwm = 255/12.0;
     float v_go = abs(v);
 
-    float commanded;
+    int commanded;
     if (v_go >= 12){
-      analogWrite(motorPWM, 255);
       commanded = 255;
+      analogWrite(motorPWM, commanded);
+      
     }
     else{
-      analogWrite(motorPWM, 255*(v_go/12.0));
-      commanded = volts2pwm*(v_go/12.0);    
+      commanded = round(volts2pwm*v_go);    
+      analogWrite(motorPWM, commanded);
     }
+    
 }
 
 
 float getCurrent() {
   float raw = analogRead(current1);
-  float volts = raw *(5.15/1024.0); //used to be raw*5/1024 bc 1024 units per 5v //but wasn't working
-  //Serial.println(volts,6);
-  float i = volts; //((36.7)*(volts/3.3)-18.3); //((36.7)*(volts/3.3)-18.3);
-  //??
+  float i = ((5.0/1024.0)*raw);
   return i;
 }
 
@@ -303,7 +252,6 @@ float getAngle() {
 
   float revs = readEncoder()/pulses;
   float rad = revs*2*3.14159;
-  //Serial.println(revs, 6);
   return rad;
 }
 
